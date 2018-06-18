@@ -1,0 +1,146 @@
+% layout 'layout';
+
+<script id="comment_template" type="text/x-custom-template">
+    <div id="comment_id#cmt_id#" style="margin-left:#cmt_level20#px">
+        #cmt_text#
+        <a href="#" style="magin-left:10px" onclick="showInput(#cmt_id#, #cmt_level#); return false">response</a>
+    </div>
+</script>
+<script id="comment_input_template" type="text/x-custom-template">
+    <div id="comment_id_new" style="margin-left:#cmt_level20#px">
+        <input type="hidden" value="#cmt_level#">
+        <input type="hidden" value="#parent_cmt_id#">
+        <input type="text" id="comment_string#parent_cmt_id#" class="comment_string">
+    </div>
+</script>
+
+% my $comment_block = begin
+%   my $r = shift;
+%   my ($cmt_id, $cmt_text, $cmt_dt, $parent_cmt_id, $msg_id, $cmt_level) = @$r;
+%   my $cmt_level20 = $cmt_level;
+%   $cmt_level20 = $config->{comments_indent_count} if $cmt_level20 > $config->{comments_indent_count};
+    <div id="comment_id<%= $cmt_id %>" style="margin-left:<%= $cmt_level20 * 20 %>px">
+        <%= $cmt_text %>
+        <a href="#" style="magin-left:10px" onclick="showInput(<%= $cmt_id %>, <%= $cmt_level+1 %>); return false">response</a>
+    </div>
+% end
+
+<h1>Message page</h1>
+
+<h2><%= $msg_title %></h2>
+<div class="msg_text"><%= $msg_text %></div>
+
+<button id="add_comment_btn" id="cmt_id" type="button">Add comment</button>
+
+<div id="add_comment_input_l1">
+    <input type="hidden" value="1">
+    <input type="hidden" value="">
+    <input type="text" id="comment_string_l1">
+</div>
+
+<div id="comments_list">
+% for my $r (@$comments) {
+    <%= $comment_block->($r) %>
+% }    
+</div>
+
+
+<script language="javascript">
+    $('#add_comment_input_l1').hide();
+    $('#comment_string_l1').on('keyup', function(e) {
+        if (e.keyCode === 13) {
+            inp = $(e.target);
+            post_comment(inp.val(), inp.prev().val(), inp.prev().prev().val()); 
+        }
+    });
+    $('#add_comment_btn').click(function(e) {
+        id = $(e.target).attr("id");
+        $('#add_comment_btn').hide();
+        $('#add_comment_input_l1').show();
+    });
+</script>
+
+<script language="javascript">
+
+function escHTML(t) {
+    return t
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;")
+            .replace(/(\r\n|\n|\r)/g,"<br />");
+}
+
+function post_comment(txt, parent_cmt_id, cmt_level) {
+    if (txt.length == 0) {
+        alert('Please enter something');
+        return;
+    }
+    if (txt.length > 1000) {
+        alert('Too much text');
+        return;
+    }
+
+    cmt_level20 = cmt_level;
+    if (cmt_level > <%= $config->{comments_indent_count} %>) {
+        cmt_level20 = <%= $config->{comments_indent_count} %>;
+    }
+
+    txt = escHTML(txt);
+
+    $.ajax('/post_comment', {
+      type: 'POST',
+      data: { 
+          cmt_text: txt,
+          parent_cmt_id: parent_cmt_id,
+          cmt_level: cmt_level
+      },
+      success: function(cmt_id) {
+         if (! isNaN(cmt_id)) {
+             template = $('#comment_template').html();
+             template = template.replace(/#cmt_id#/g, cmt_id);
+             template = template.replace('#cmt_level20#', cmt_level20 * 20);
+             template = template.replace('#cmt_level#', Number(cmt_level) + 1);
+             template = template.replace('#cmt_text#', txt);
+             if (parent_cmt_id == '') {
+                $('#comment_string_l1').val('');
+                $('#add_comment_input_l1').hide();
+                $('#add_comment_btn').show();
+                $('div#comments_list').prepend($.parseHTML(template));
+             } else {
+                $('#comment_id_new').remove();
+                $('div#comment_id'+parent_cmt_id).after($.parseHTML(template));
+             }
+         } else {
+             alert('server err');
+         }
+      },
+      error: function() {
+         alert('err');
+      }
+    });
+    return;
+}
+
+function showInput(parent_cmt_id, cmt_level) {
+    cmt_level20 = cmt_level;
+    if (cmt_level > <%= $config->{comments_indent_count} %>) {
+        cmt_level20 = <%= $config->{comments_indent_count} %>;
+    }
+    $('#comment_id_new').remove();
+    template = $('#comment_input_template').html();
+    template = template.replace('#parent_cmt_id#', parent_cmt_id);
+    template = template.replace('#parent_cmt_id#', parent_cmt_id);
+    template = template.replace(/#cmt_level#/g, cmt_level);
+    template = template.replace('#cmt_level20#', cmt_level20 * 20);
+    $('div#comment_id'+parent_cmt_id).after($.parseHTML(template));
+    $('.comment_string').on('keyup', function(e) {
+        if (e.keyCode === 13) {
+            inp = $(e.target);
+            post_comment(inp.val(), inp.prev().val(), inp.prev().prev().val()); 
+        }
+    });
+}
+
+</script>

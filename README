@@ -1,0 +1,9 @@
+Needs Perl Mojolicious package to be installed
+
+*IMPORTANT* chek perl path in script/ugc.pl *IMPORTANT*
+
+DB scema: schema.sql
+Needs DB user: ugc/ugc (see config ugc.conf)
+
+To start server run start_server.sh )
+Runs on 127.0.0.1:3000
