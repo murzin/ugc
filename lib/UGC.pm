@@ -5,7 +5,7 @@ use Mojo::Base 'Mojolicious';
 sub startup {
     my $app = shift;
 
-    $app->plugin('Config' => {file => $app->home.'/ugc.conf'});
+    $app->plugin('Config');
 
     my $log = $app->log;
 
